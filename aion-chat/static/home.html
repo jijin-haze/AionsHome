@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Aion Home</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/public/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ff8359">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: #2a1f14;
+}
+
+/* ── 全屏容器 ── */
+.phone-screen {
+  width: 100%;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: url('/public/BackGround.png') center/cover no-repeat;
+}
+
+/* ── 时钟小组件 ── */
+.clock-widget {
+  flex-shrink: 0;
+  padding: 40px 24px 0;
+  color: #3a2e22;
+  text-shadow: 0 1px 4px rgba(255,255,255,0.4);
+}
+.clock-widget .clock-time {
+  font-size: 64px;
+  font-weight: 200;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.clock-widget .clock-date {
+  font-size: 17px;
+  font-weight: 500;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* ── 应用图标区 ── */
+.app-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 0;
+  padding: 16px 16px 12px;
+  align-content: end;
+  overflow-y: auto;
+}
+.app-grid::-webkit-scrollbar { display: none; }
+
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  text-decoration: none;
+}
+.app-icon:active .icon-img {
+  transform: scale(0.9);
+}
+.app-icon .icon-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.app-icon .icon-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.app-icon .icon-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #3a2e22;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.5);
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 4px;
+  max-width: 70px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-icon.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.app-icon.disabled:active .icon-img {
+  transform: none;
+}
+
+/* ── 底部 Dock 栏 ── */
+.dock {
+  flex-shrink: 0;
+  padding: 14px 24px;
+  margin-bottom: 28px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  position: relative;
+}
+.dock::before {
+  content: '';
+  position: absolute;
+  left: 12px; right: 12px;
+  top: 0; bottom: 0;
+  background: rgba(255,255,255,0.35);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-radius: 24px;
+  z-index: 0;
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.dock .app-icon {
+  position: relative;
+  z-index: 1;
+}
+.dock .app-icon .icon-label { display: none; }
+
+/* ── Toast 提示 ── */
+.toast {
+  position: absolute;
+  bottom: 110px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(10px);
+  color: #333;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── 页面切换动画 ── */
+.phone-screen.navigating {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+@keyframes fadeOut {
+  to { opacity: 0; transform: scale(0.97); }
+}
+</style>
+</head>
+<body>
+
+  <div class="phone-screen" id="screen">
+
+    <!-- 时钟小组件 -->
+    <div class="clock-widget">
+      <div class="clock-time" id="clockTime"></div>
+      <div class="clock-date" id="clockDate"></div>
+    </div>
+
+    <!-- 应用网格 -->
+    <div class="app-grid" id="appGrid"></div>
+
+    <!-- 底部 Dock -->
+    <div class="dock" id="dock"></div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+
+<script>
+/* ── 应用注册表 ─────────────────────────────────── */
+const APPS = [
+  { id: 'chat',     name: '聊天',     icon: '/public/funIcon_0005_聊天.png',   url: '/chat',  dock: true },
+  { id: 'memory',   name: '记忆库',   icon: '/public/funIcon_0004_记忆库.png',  url: '/memory' ,  dock: true },
+  { id: 'worldbook',name: '世界书',   icon: '/public/funIcon_0007_世界书.png',  url: '/worldbook' },
+  { id: 'theater',  name: '小剧场',   icon: '/public/funIcon_0009_小剧场.png',  url: '/theater' },
+  { id: 'moments',  name: '心语',   icon: '/public/funIcon_0006_日记本.png',  url: '/heart-whispers' ,  dock: true },
+  { id: 'whisper',  name: '密语时刻', icon: '/public/funIcon_0011_密语时刻.png', url: '/chat?whisper=1' },
+  { id: 'alarm',    name: '闹钟',     icon: '/public/funIcon_0012_闹钟.png',    url: '/schedule' },
+  { id: 'settings', name: '设置',     icon: '/public/funIcon_0008_设置.png',    url: '/settings' },
+  { id: 'camera',   name: '监控摄像头', icon: '/public/funIcon_0014_监控.png', url: '/camera' },
+  { id: 'logs',     name: '监控日志', icon: '/public/funIcon_0015_监控日志.png',   url: '/monitor-logs' },
+  { id: 'location', name: '定位追踪',     icon: '/public/funIcon_0013_地图.png',    url: '/location' },
+  { id: 'activity', name: '活动日志',     icon: '/public/funIcon_0000_备忘录.png', url: '/activity-logs' },
+  { id: 'reading',  name: '陪伴阅读',     icon: '/public/funIcon_0016_陪伴阅读.png',   url: '/reading' },
+];
+
+/* ── 渲染 ─────────────────────────────────────── */
+function renderApps() {
+  const grid = document.getElementById('appGrid');
+  const dock = document.getElementById('dock');
+
+  const gridApps = APPS.filter(a => !a.dock);
+  const dockApps = APPS.filter(a => a.dock);
+
+  grid.innerHTML = gridApps.map(app => appHTML(app)).join('');
+  dock.innerHTML = dockApps.map(app => appHTML(app)).join('');
+}
+
+function appHTML(app) {
+  const disabled = !app.url;
+  return `
+    <a class="app-icon ${disabled ? 'disabled' : ''}"
+       ${app.url ? `onclick="openApp('${app.url}')"` : `onclick="showToast('${app.name} — 还在做哦！😏')"`}
+       role="button" tabindex="0">
+      <div class="icon-img"><img src="${app.icon}" alt="${app.name}" draggable="false"></div>
+      <span class="icon-label">${app.name}</span>
+    </a>`;
+}
+
+/* ── 打开应用 ── */
+function openApp(url) {
+  // 在 iframe 中时，如果目标是 /chat 则关闭浮层回到聊天页
+  if (window.parent !== window) {
+    if (url === '/chat' || url.startsWith('/chat?')) {
+      try {
+        if (url.includes('whisper=1')) window.parent.openWhisper();
+        window.parent.closeSubPage();
+      } catch(e) {}
+      return;
+    }
+  }
+  const screen = document.getElementById('screen');
+  screen.classList.add('navigating');
+  setTimeout(() => { window.location.href = url; }, 200);
+}
+
+/* ── Toast ── */
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+/* ── 时钟 ── */
+const _weekdays = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('clockTime').textContent = `${h}:${m}`;
+  document.getElementById('clockDate').textContent =
+    `${now.getMonth()+1}月${now.getDate()}日${_weekdays[now.getDay()]}`;
+}
+
+/* ── 初始化 ── */
+renderApps();
+updateClock();
+setInterval(updateClock, 15000);
+</script>
+<script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>

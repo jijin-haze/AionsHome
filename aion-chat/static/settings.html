@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>设置 - Aion</title>
+<link rel="stylesheet" href="/static/common.css">
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#ff8359">
+</head>
+<body>
+<div class="sub-page">
+  <div class="top-bar">
+    <button class="back-btn" onclick="location.href='/'">⬅</button>
+    <h2>⚙ 设置</h2>
+  </div>
+  <div class="page-content">
+    <label class="form-label">Gemini API Key</label>
+    <input class="form-input" type="text" id="geminiKeyInput" placeholder="输入 Gemini API Key..." autocomplete="off" style="font-family:monospace">
+    <label class="form-label">Gemini Free Key（哨兵+向量）</label>
+    <input class="form-input" type="text" id="geminiFreeKeyInput" placeholder="留空则复用上方 Key" autocomplete="off" style="font-family:monospace">
+    <label class="form-label">硅基流动 API Key</label>
+    <input class="form-input" type="text" id="sfKeyInput" placeholder="输入硅基流动 API Key..." autocomplete="off" style="font-family:monospace">
+    <label class="form-label">中转站 API Key</label>
+    <input class="form-input" type="text" id="aiproKeyInput" placeholder="输入中转站 API Key..." autocomplete="off" style="font-family:monospace">
+    <label class="form-label">网易云 MUSIC_U Cookie（VIP 点歌）</label>
+    <input class="form-input" type="text" id="neteaseMusicUInput" placeholder="浏览器 F12 → Cookie → MUSIC_U" autocomplete="off" style="font-family:monospace">
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="location.href='/'">取消</button>
+      <button class="btn-save" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+<script src="/static/common.js"></script>
+<script>
+connectCommonWS();
+
+(async function init() {
+  const s = await api("GET", "/api/settings");
+  $("geminiKeyInput").value = s.gemini_key || "";
+  $("geminiFreeKeyInput").value = s.gemini_free_key || "";
+  $("sfKeyInput").value = s.siliconflow_key || "";
+  $("aiproKeyInput").value = s.aipro_key || "";
+  $("neteaseMusicUInput").value = s.netease_music_u || "";
+})();
+
+async function saveSettings() {
+  await api("PUT", "/api/settings", {
+    gemini_key: $("geminiKeyInput").value.trim(),
+    gemini_free_key: $("geminiFreeKeyInput").value.trim(),
+    siliconflow_key: $("sfKeyInput").value.trim(),
+    aipro_key: $("aiproKeyInput").value.trim(),
+    netease_music_u: $("neteaseMusicUInput").value.trim()
+  });
+  showToast("✅ 已保存");
+}
+</script>
+</body>
+</html>

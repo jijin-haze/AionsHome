@@ -1,0 +1,147 @@
+/* ── Aion Common Styles ── */
+:root {
+  --bg: #fff9f5;
+  --surface: #ffffff;
+  --surface2: #fff0e6;
+  --border: #f0e4dd;
+  --text: #4a3b32;
+  --text2: #8a7b72;
+  --text3: #b0a39a;
+  --accent: #ff8359;
+  --user-bg: #ffe4eb;
+  --ai-bg: #e8f5e9;
+  --danger: #cf222e;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body { font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+
+/* ── 自定义滚动条 ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background-color: rgba(0,0,0,0.15); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background-color: rgba(0,0,0,0.3); }
+
+/* ── 子页面布局 ── */
+.sub-page {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* ── 顶部导航栏 ── */
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,249,245,0.85);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  flex-shrink: 0;
+  z-index: 10;
+}
+.top-bar .back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.top-bar h2 {
+  flex: 1;
+  font-size: 17px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── 内容区 ── */
+.page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ── 通用 toggle ── */
+.toggle-switch { position:relative; width:42px; height:24px; cursor:pointer; flex-shrink:0; }
+.toggle-switch input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; inset:0; background:var(--surface2); border:1px solid var(--border); border-radius:12px; transition:0.2s; }
+.toggle-slider:before { content:""; position:absolute; height:18px; width:18px; left:2px; top:2px; background:var(--text3); border-radius:50%; transition:0.2s; }
+.toggle-switch input:checked + .toggle-slider { background:var(--accent); border-color:var(--accent); }
+.toggle-switch input:checked + .toggle-slider:before { transform:translateX(18px); background:#fff; }
+
+/* ── 通用按钮 ── */
+.btn-row { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
+.btn-row button { padding:8px 18px; border:none; border-radius:8px; font-size:14px; cursor:pointer; }
+.btn-save { background:var(--accent); color:#fff; }
+.btn-save:hover { opacity:0.85; }
+.btn-cancel { background:var(--surface2); color:var(--text); }
+
+/* ── 通用表单 ── */
+.form-label { display:block; font-size:13px; color:var(--text2); margin-bottom:4px; margin-top:14px; }
+.form-label:first-child { margin-top:0; }
+.form-input {
+  width:100%;
+  background:var(--surface2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 12px;
+  font-size:14px;
+  outline:none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.form-input:focus { border-color:var(--accent); }
+textarea.form-input { resize:vertical; min-height:120px; line-height:1.6; }
+.form-hint { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* ── 通用列表 ── */
+.list-container {
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--bg);
+  padding:4px;
+  overflow-y:auto;
+}
+.list-empty { padding:24px; text-align:center; color:var(--text3); font-size:14px; }
+
+/* ── 闹铃弹窗（全局，每个页面都需要） ── */
+.alarm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; align-items:center; justify-content:center; }
+.alarm-overlay.show { display:flex; }
+.alarm-box { background:var(--surface); border:2px solid #f59e0b; border-radius:16px; padding:24px 28px; max-width:380px; width:90%; text-align:center; animation:alarmPulse 1s ease-in-out infinite alternate; }
+.alarm-box h3 { font-size:20px; margin-bottom:12px; }
+.alarm-box .alarm-icon { font-size:48px; margin-bottom:8px; }
+.alarm-box .alarm-content { font-size:15px; margin-bottom:6px; line-height:1.5; }
+.alarm-box .alarm-time { font-size:12px; color:var(--text3); margin-bottom:16px; }
+.alarm-box button { padding:10px 32px; border:none; border-radius:8px; background:#f59e0b; color:#000; font-size:14px; font-weight:600; cursor:pointer; }
+.alarm-box button:hover { background:#d97706; }
+@keyframes alarmPulse { from { box-shadow:0 0 20px rgba(245,158,11,0.3); } to { box-shadow:0 0 40px rgba(245,158,11,0.6); } }
+
+/* ── Toast 提示 ── */
+.toast-msg {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(74,59,50,0.9);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-size: 13px;
+  opacity: 0;
+  transition: all 0.3s;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+}
+.toast-msg.show { opacity: 1; transform: translateX(-50%) translateY(0); }

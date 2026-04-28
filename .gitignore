@@ -1,0 +1,63 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# ── IDE ──
+.vscode/
+.idea/
+
+# ── 用户数据（含隐私信息，不应上传） ──
+aion-chat/data/chat.db
+aion-chat/data/settings.json
+aion-chat/data/worldbook.json
+aion-chat/data/chat_status.json
+aion-chat/data/digest_anchor.json
+aion-chat/data/cam_config.json
+aion-chat/data/location_config.json
+aion-chat/data/location_status.json
+aion-chat/data/chats/*.md
+aion-chat/data/chats/_index.json
+aion-chat/data/monitor_logs/*.jsonl
+aion-chat/data/activity_logs/*.jsonl
+aion-chat/data/screenshots/*
+aion-chat/data/uploads/*
+aion-chat/data/tts_cache/*
+
+# ── 保留空文件夹的 .gitkeep ──
+!aion-chat/data/chats/.gitkeep
+!aion-chat/data/monitor_logs/.gitkeep
+!aion-chat/data/activity_logs/.gitkeep
+!aion-chat/data/screenshots/.gitkeep
+!aion-chat/data/uploads/.gitkeep
+!aion-chat/data/tts_cache/.gitkeep
+
+# ── 独立 Demo / 测试项目（不属于主程序） ──
+Active/
+LittleToy/
+语音唤醒/
+火山引擎TTSdemo/
+
+# ── 个人文件（不应上传） ──
+自己看的存档.txt
+MW_RAG_Backup_*.json
+import_mw_rag.py
+fix_schedules.py
+
+# ── Android 构建产物 ──
+AionApp/app/build/
+AionApp/.gradle/
+AionApp/build/
+AionApp/local.properties
+*.apk
+*.aab
+
+# ── 其他 ──
+*.mp3
+!public/*.mp3
+*.log
+.DS_Store
+Thumbs.db

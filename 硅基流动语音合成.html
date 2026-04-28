@@ -1,0 +1,278 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硅基流动语音合成</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
+            background: #3b82f6; margin-top: -5px; border: 2px solid #fff; cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 text-sm h-screen flex flex-col overflow-hidden">
+
+    <!-- 顶栏 -->
+    <header class="bg-white border-b border-slate-200 px-4 py-2 flex items-center justify-between shrink-0">
+        <h1 class="font-bold text-base text-slate-700">硅基流动语音合成</h1>
+        <div class="flex items-center gap-2">
+            <input type="password" id="apiKey" placeholder="填入硅基流动 API Key" 
+                class="w-64 border border-slate-300 rounded px-2 py-1 text-xs font-mono focus:border-blue-500 outline-none">
+            <button onclick="saveKeyAndRefresh()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-bold shrink-0">验证</button>
+        </div>
+    </header>
+
+    <!-- 主体 -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- 左栏：文本输入 + 参数 + 播放 -->
+        <div class="flex-1 flex flex-col border-r border-slate-200 min-w-0">
+            <textarea id="promptText" placeholder="在此输入要合成的文本..."
+                class="flex-1 bg-white text-slate-900 p-4 outline-none border-none resize-none"
+                style="font-size: 16px; line-height: 1.6;"></textarea>
+
+            <!-- 底部控制条 -->
+            <div class="bg-white border-t border-slate-200 px-4 py-3 flex items-center gap-4 shrink-0">
+                <!-- 当前音色 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <div id="voiceStatusDot" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <span id="currentVoiceName" class="text-xs text-slate-500 max-w-[120px] truncate">未选择音色</span>
+                </div>
+                <!-- 语速 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <label class="text-xs text-slate-400">语速</label>
+                    <input type="range" id="speedInput" min="0.5" max="2.0" step="0.1" value="1.0" 
+                        oninput="document.getElementById('speedVal').textContent=this.value+'x'" class="w-20">
+                    <span id="speedVal" class="text-xs font-mono text-blue-600 w-7">1.0x</span>
+                </div>
+                <!-- 增益 -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <label class="text-xs text-slate-400">增益</label>
+                    <input type="range" id="gainInput" min="-10" max="10" step="1" value="0"
+                        oninput="document.getElementById('gainVal').textContent=(this.value>0?'+':'')+this.value+'dB'" class="w-20">
+                    <span id="gainVal" class="text-xs font-mono text-blue-600 w-10">0dB</span>
+                </div>
+                <!-- 弹性空间 -->
+                <div class="flex-1"></div>
+                <!-- 播放/下载 -->
+                <button id="playStopBtn" onclick="togglePlayback()" class="hidden px-3 py-1.5 border border-slate-300 rounded text-xs font-bold hover:bg-slate-50">
+                    <span id="playLabel">▶ 播放</span>
+                </button>
+                <button id="downloadBtn" onclick="downloadLatestAudio()" class="hidden px-3 py-1.5 border border-slate-300 rounded text-xs font-bold text-blue-600 hover:bg-blue-50">
+                    ↓ 下载
+                </button>
+                <!-- 合成按钮 -->
+                <button id="directGenerateBtn" onclick="handleSynthesis()"
+                    class="bg-slate-800 hover:bg-blue-700 text-white px-5 py-1.5 rounded text-xs font-bold shrink-0">
+                    合成语音
+                </button>
+                <audio id="audioPlayer" class="hidden"></audio>
+            </div>
+        </div>
+
+        <!-- 右栏：音色库 + 克隆 -->
+        <div class="w-72 bg-white flex flex-col shrink-0 overflow-hidden">
+            <!-- 音色库 -->
+            <div class="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-slate-50 shrink-0">
+                <div class="flex items-center gap-1.5">
+                    <span class="font-bold text-slate-700">音色库</span>
+                    <span id="voiceCountBadge" class="bg-slate-200 text-slate-500 text-[10px] px-1.5 rounded">0</span>
+                </div>
+                <button onclick="refreshVoiceList()" class="text-blue-600 hover:text-blue-800 text-xs font-bold">刷新</button>
+            </div>
+            <div id="voiceListContainer" class="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">
+                <div class="text-center py-4 text-slate-400 text-xs">填入 Key 后点击验证</div>
+            </div>
+
+            <!-- 音色克隆 -->
+            <div class="border-t border-slate-200 shrink-0">
+                <div class="px-3 py-2 bg-slate-50 border-b border-slate-200">
+                    <span class="font-bold text-slate-700">音色克隆</span>
+                    <span class="text-[10px] text-slate-400 ml-1">上传 3-10s 人声</span>
+                </div>
+                <div class="p-3 space-y-2">
+                    <input type="file" id="audioFile" accept="audio/*" 
+                        class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                    <textarea id="refText" rows="2" placeholder="参考文本（录音内容的文字）"
+                        class="w-full bg-white border border-slate-300 rounded p-2 text-xs focus:border-blue-500 outline-none"></textarea>
+                    <button id="cloneBtn" onclick="handleClone()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-1.5 rounded text-xs font-bold">开始训练</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="globalToast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-4 py-2 rounded-lg shadow z-50 text-xs font-bold"></div>
+
+    <script>
+        const state = { currentVoiceId: null, currentAudioBlob: null, currentObjectUrl: null, toastTimeout: null };
+
+        function $(id) { return document.getElementById(id); }
+
+        // ── Toast ──
+        function showToast(msg, type = 'info') {
+            const t = $('globalToast');
+            if (state.toastTimeout) clearTimeout(state.toastTimeout);
+            t.textContent = msg;
+            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow z-50 text-xs font-bold ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            state.toastTimeout = setTimeout(() => t.classList.add('hidden'), 1500);
+        }
+
+        // ── Audio ──
+        function cleanupOldAudio() {
+            const p = $('audioPlayer');
+            p.pause(); p.src = "";
+            try { p.load(); } catch(e){}
+            if (state.currentObjectUrl) { URL.revokeObjectURL(state.currentObjectUrl); state.currentObjectUrl = null; }
+            state.currentAudioBlob = null;
+        }
+
+        function togglePlayback() {
+            const p = $('audioPlayer');
+            if (p.paused && p.src) { p.play().catch(()=>{}); } 
+            else { p.pause(); p.currentTime = 0; }
+        }
+
+        $('audioPlayer').onplay = () => $('playLabel').textContent = '■ 停止';
+        $('audioPlayer').onpause = $('audioPlayer').onended = () => $('playLabel').textContent = '▶ 播放';
+
+        function downloadLatestAudio() {
+            if (!state.currentAudioBlob) return showToast("暂无音频", "error");
+            const url = URL.createObjectURL(state.currentAudioBlob);
+            const a = Object.assign(document.createElement('a'), { href: url, download: `tts_${Date.now()}.mp3` });
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+        }
+
+        // ── Key ──
+        function saveKeyAndRefresh() {
+            const k = $('apiKey').value.trim();
+            if (!k) return showToast("请填入 API Key", "error");
+            localStorage.setItem('sf_api_key', k);
+            refreshVoiceList();
+        }
+
+        // ── Voice List ──
+        async function refreshVoiceList() {
+            const key = $('apiKey').value.trim();
+            if (!key) return;
+            localStorage.setItem('sf_api_key', key);
+            const c = $('voiceListContainer');
+            c.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">加载中...</div>';
+            try {
+                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/list', { headers: { 'Authorization': `Bearer ${key}` } });
+                if (!res.ok) throw new Error("Key 无效或网络错误");
+                const data = await res.json();
+                const voices = data.result || data.voices || data.data || [];
+                $('voiceCountBadge').textContent = voices.length;
+                c.innerHTML = '';
+                voices.forEach(v => {
+                    const alias = localStorage.getItem(`alias_${v.uri}`);
+                    const name = alias || v.customName || "Unnamed";
+                    const sel = state.currentVoiceId === v.uri;
+                    const el = document.createElement('div');
+                    el.className = `flex items-center justify-between p-2 border rounded cursor-pointer text-xs ${sel ? 'bg-blue-50 border-blue-400 font-bold' : 'bg-white border-slate-200 hover:bg-slate-50'}`;
+                    el.onclick = () => selectVoice(v.uri, name);
+                    el.innerHTML = `<span class="truncate flex-1 pr-2">${name}</span>
+                        <span class="flex gap-1 shrink-0">
+                            <button class="text-slate-400 hover:text-blue-600" onclick="event.stopPropagation();renameVoice('${v.uri}','${name.replace(/'/g,"\\'")}')">✎</button>
+                            <button class="text-slate-400 hover:text-red-600" onclick="event.stopPropagation();deleteVoice('${v.uri}','${name.replace(/'/g,"\\'")}')">✕</button>
+                        </span>`;
+                    c.appendChild(el);
+                });
+                showToast(`已加载 ${voices.length} 个音色`);
+            } catch (e) { c.innerHTML = `<div class="text-center py-2 text-red-500 text-xs">${e.message}</div>`; }
+        }
+
+        function selectVoice(id, name) {
+            state.currentVoiceId = id;
+            $('currentVoiceName').textContent = name;
+            $('voiceStatusDot').className = "w-2 h-2 rounded-full bg-green-500";
+            refreshVoiceList();
+        }
+
+        function renameVoice(uri, oldName) {
+            const n = prompt("重命名音色：", oldName);
+            if (n) { localStorage.setItem(`alias_${uri}`, n); refreshVoiceList(); if (state.currentVoiceId === uri) $('currentVoiceName').textContent = n; }
+        }
+
+        async function deleteVoice(uri, name) {
+            if (!confirm(`确定删除 "${name}"？不可恢复。`)) return;
+            const key = $('apiKey').value.trim();
+            try {
+                const res = await fetch('https://api.siliconflow.cn/v1/audio/voice/deletions', {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uri })
+                });
+                if (res.ok) {
+                    localStorage.removeItem(`alias_${uri}`);
+                    if (state.currentVoiceId === uri) { state.currentVoiceId = null; $('currentVoiceName').textContent = "未选择音色"; $('voiceStatusDot').className = "w-2 h-2 rounded-full bg-slate-300"; }
+                    showToast("已删除"); refreshVoiceList();
+                } else { throw new Error((await res.json()).message || "删除失败"); }
+            } catch (e) { showToast(e.message, "error"); }
+        }
+
+        // ── Synthesis ──
+        async function handleSynthesis() {
+            const key = $('apiKey').value.trim(), text = $('promptText').value.trim();
+            if (!key || !text || !state.currentVoiceId) return showToast("请填写文本并选择音色", "error");
+            const btn = $('directGenerateBtn');
+            btn.disabled = true; btn.classList.add('opacity-50'); btn.textContent = '合成中...';
+            try {
+                const res = await fetch('https://api.siliconflow.cn/v1/audio/speech', {
+                    method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: "FunAudioLLM/CosyVoice2-0.5B", input: text, voice: state.currentVoiceId,
+                        response_format: "mp3", speed: parseFloat($('speedInput').value), gain: parseInt($('gainInput').value)
+                    })
+                });
+                if (!res.ok) throw new Error("API Error");
+                const blob = await res.blob();
+                cleanupOldAudio();
+                state.currentAudioBlob = blob;
+                state.currentObjectUrl = URL.createObjectURL(blob);
+                $('audioPlayer').src = state.currentObjectUrl;
+                $('playStopBtn').classList.remove('hidden');
+                $('downloadBtn').classList.remove('hidden');
+                try { await $('audioPlayer').play(); } catch(e){}
+                showToast("合成成功");
+            } catch (e) { showToast("合成失败", "error"); }
+            finally { btn.disabled = false; btn.classList.remove('opacity-50'); btn.textContent = '合成语音'; }
+        }
+
+        // ── Clone ──
+        async function handleClone() {
+            const key = $('apiKey').value.trim(), file = $('audioFile').files[0], ref = $('refText').value;
+            if (!key || !file || !ref) return showToast("请填写录音和参考文本", "error");
+            const btn = $('cloneBtn'); btn.textContent = "上传中..."; btn.disabled = true;
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                try {
+                    const res = await fetch('https://api.siliconflow.cn/v1/uploads/audio/voice', {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model: "FunAudioLLM/CosyVoice2-0.5B", customName: `Clone_${Date.now()}`, audio: reader.result, text: ref })
+                    });
+                    const data = await res.json();
+                    if (data.uri) { showToast("训练成功"); refreshVoiceList(); }
+                    else throw new Error("训练失败");
+                } catch(e) { showToast(e.message || "Error", "error"); }
+                finally { btn.textContent = "开始训练"; btn.disabled = false; }
+            };
+        }
+
+        // ── Init ──
+        window.onload = () => {
+            const k = localStorage.getItem('sf_api_key');
+            if (k) { $('apiKey').value = k; refreshVoiceList(); }
+        };
+    </script>
+</body>
+</html>
